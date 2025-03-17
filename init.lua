@@ -52,6 +52,49 @@ require("lazy").setup({
     end,
   },
   {
+    "folke/noice.nvim",
+    config = function()
+      require("noice").setup({
+        lsp = {
+          override = {
+            ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+            ["vim.lsp.util.stylize_markdown"] = true,
+            ["cmp.entry.get_documentation"] = true,
+          },
+          -- Ensure code actions use the default UI or a compatible handler
+          signature = { enabled = true }, -- Optional: for signature help
+          hover = { enabled = true },     -- Optional: for hover docs
+        },
+        presets = {
+          bottom_search = true,
+          command_palette = true,
+          long_message_to_split = true,
+          inc_rename = false,
+          lsp_doc_border = false,
+        },
+        -- Explicitly configure notify backend
+        notify = {
+          enabled = true,
+          view = "notify", -- Use nvim-notify for notifications
+        },
+        -- Ensure popups work
+        views = {
+          cmdline_popup = {
+            position = { row = 5, col = "50%" },
+            size = { width = 60, height = "auto" },
+          },
+          popupmenu = {
+            relative = "editor",
+            position = { row = 8, col = "50%" },
+            size = { width = 60, height = 10 },
+            border = { style = "rounded", padding = { 0, 1 } },
+          },
+        },
+      })
+    end,
+    dependencies = { "rcarriga/nvim-notify" }, -- Add this to ensure proper integration
+  },
+  {
     "b0o/incline.nvim",
     dependencies = { "craftzdog/solarized-osaka.nvim" },
     event = "BufReadPre",
@@ -65,7 +108,7 @@ require("lazy").setup({
             InclineNormalNC = { guifg = colors.violet500, guibg = colors.base03 },
           },
         },
-        window = { margin = { vertical = 0, horizontal = 1 } },
+        window = { margin = { vertical = 1, horizontal = 1 } },
         hide = {
           cursorline = true,
         },
@@ -74,7 +117,7 @@ require("lazy").setup({
           if vim.bo[props.buf].modified then
             filename = "[+] " .. filename
           end
-
+  
           local icon, color = require("nvim-web-devicons").get_icon_color(filename)
           return { { icon, guifg = color }, { " " }, { filename } }
         end,
@@ -97,26 +140,18 @@ require("lazy").setup({
     },
   },
   {
-    "folke/noice.nvim",
-    config = function()
-      require("noice").setup({
-        lsp = {
-          -- override markdown rendering so that **cmp** and other plugins use **Treesitter**
-          override = {
-            ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
-            ["vim.lsp.util.stylize_markdown"] = true,
-            ["cmp.entry.get_documentation"] = true, -- requires hrsh7th/nvim-cmp
-          },
-        },
-        -- you can enable a preset for easier configuration
-        presets = {
-          bottom_search = true, -- use a classic bottom cmdline for search
-          command_palette = true, -- position the cmdline and popupmenu together
-          long_message_to_split = true, -- long messages will be sent to a split
-          inc_rename = false, -- enables an input dialog for inc-rename.nvim
-          lsp_doc_border = false, -- add a border to hover docs and signature help
-        },
-      })
+    "rcarriga/nvim-notify",
+    opts = {
+      timeout = 10000,
+      stages = "fade_in_slide_out", -- Smooth animation
+      render = "default",
+      on_open = function(win)
+        vim.api.nvim_win_set_config(win, { focusable = false }) -- Prevent stealing focus
+      end,
+    },
+    config = function(_, opts)
+      require("notify").setup(opts)
+      vim.notify = require("notify") -- Ensure Neovim uses nvim-notify
     end,
   },
   {
@@ -128,8 +163,11 @@ require("lazy").setup({
   {
     "nvim-telescope/telescope-ui-select.nvim",
     config = function()
+      local telescope_ui = require("telescope")
+      telescope_ui.load_extension("ui-select")
       local original_ui_select = vim.ui.select
       vim.ui.select = function(items, opts, on_choice)
+        -- Only override for specific file selection prompts
         if opts.prompt and opts.prompt:match("Select a file") and vim.fn.getline('.'):match('#file:') then
           require("telescope.builtin").find_files({
             prompt_title = "Select a file",
@@ -148,6 +186,7 @@ require("lazy").setup({
             end,
           })
         else
+          -- Fallback to original UI select for LSP code actions
           original_ui_select(items, opts, on_choice)
         end
       end
@@ -159,7 +198,6 @@ require("lazy").setup({
   "hrsh7th/cmp-nvim-lsp",
   "hrsh7th/cmp-buffer", -- Optional: for buffer completions
   "hrsh7th/cmp-path", -- Optional: for path completions
-  "tpope/vim-fugitive",
   {
     "kyazdani42/nvim-tree.lua",
     dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -280,7 +318,7 @@ require("lazy").setup({
     config = function()
       vim.cmd.colorscheme "catppuccin"
       require("catppuccin").setup({
-        transparent_background = true,
+        -- transparent_background = true,
       })
     end,
   },
@@ -292,6 +330,9 @@ require("lazy").setup({
       "nvim-telescope/telescope.nvim", -- optional
     },
     config = true
+  },
+  {
+    "tpope/vim-commentary"
   }
 })
 
@@ -477,3 +518,7 @@ vim.keymap.set("n", "<s-tab>", ":tabprev<Return>")
 vim.keymap.set("n", "ss", ":split<Return>")
 vim.keymap.set("n", "sv", ":vsplit<Return>")
 vim.keymap.set("n", "<leader>ng", ":Neogit<Return>")
+
+-- Vim Commentary
+vim.keymap.set('n', '<leader>/', 'gcc', { remap = true })
+vim.keymap.set('v', '<leader>/', 'gc', { remap = true })
