@@ -74,7 +74,7 @@ require("lazy").setup({
           if vim.bo[props.buf].modified then
             filename = "[+] " .. filename
           end
-  
+
           local icon, color = require("nvim-web-devicons").get_icon_color(filename)
           return { { icon, guifg = color }, { " " }, { filename } }
         end,
@@ -476,3 +476,4 @@ vim.keymap.set("n", "<s-tab>", ":tabprev<Return>")
 -- Split Window
 vim.keymap.set("n", "ss", ":split<Return>")
 vim.keymap.set("n", "sv", ":vsplit<Return>")
+vim.keymap.set("n", "<leader>ng", ":Neogit<Return>")
