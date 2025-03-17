@@ -520,3 +520,12 @@ vim.keymap.set("n", "<leader>ng", ":Neogit<Return>")
 -- Vim Commentary
 vim.keymap.set('n', '<leader>/', 'gcc', { remap = true })
 vim.keymap.set('v', '<leader>/', 'gc', { remap = true })
+-- Add this after your existing keybindings
+vim.keymap.set("i", "<C-h>", function()
+  -- Close all floating windows
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_config(win).relative ~= "" then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+end, { desc = "Close floating windows in insert mode" })
