@@ -61,9 +61,7 @@ require("lazy").setup({
             ["vim.lsp.util.stylize_markdown"] = true,
             ["cmp.entry.get_documentation"] = true,
           },
-          -- Ensure code actions use the default UI or a compatible handler
-          signature = { enabled = true }, -- Optional: for signature help
-          hover = { enabled = true },     -- Optional: for hover docs
+          signature = { enabled = true, auto_open = true }, -- Ensure signature help is enabled
         },
         presets = {
           bottom_search = true,
@@ -72,17 +70,7 @@ require("lazy").setup({
           inc_rename = false,
           lsp_doc_border = false,
         },
-        -- Explicitly configure notify backend
-        notify = {
-          enabled = true,
-          view = "notify", -- Use nvim-notify for notifications
-        },
-        -- Ensure popups work
         views = {
-          cmdline_popup = {
-            position = { row = 5, col = "50%" },
-            size = { width = 60, height = "auto" },
-          },
           popupmenu = {
             relative = "editor",
             position = { row = 8, col = "50%" },
@@ -92,7 +80,7 @@ require("lazy").setup({
         },
       })
     end,
-    dependencies = { "rcarriga/nvim-notify" }, -- Add this to ensure proper integration
+    dependencies = { "rcarriga/nvim-notify" },
   },
   {
     "b0o/incline.nvim",
@@ -382,6 +370,7 @@ cmp.setup {
 local lspconfig = require("lspconfig")
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
+
 lspconfig.ts_ls.setup {
   capabilities = capabilities,
   on_attach = function(client, bufnr)
@@ -394,6 +383,16 @@ lspconfig.ts_ls.setup {
     vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
     vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
     vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+    vim.keymap.set("n", "<leader>ai", function()
+      vim.lsp.buf.code_action({
+        context = { only = {"source.addMissingImports.ts"} },
+        apply = true,
+      })
+    end, { buffer = bufnr, desc = "Auto-import missing TypeScript imports" })
+    -- Add signature help navigation
+    vim.keymap.set("i", "<C-j>", vim.lsp.buf.signature_help, opts) -- Trigger/help
+    vim.keymap.set("i", "<C-n>", function() vim.lsp.buf.signature_help({ next = true }) end, opts) -- Next overload
+    vim.keymap.set("i", "<C-p>", function() vim.lsp.buf.signature_help({ prev = true }) end, opts) -- Previous overload
   end,
   settings = {
     typescript = {
@@ -409,7 +408,6 @@ lspconfig.ts_ls.setup {
     },
   },
 }
-
 -- Neoformat configuration
 -- vim.g.neoformat_typescript_prettier = {
 --   exe = "prettier",
