@@ -120,6 +120,12 @@ require("lazy").setup({
     end,
   },
   {
+    "rcarriga/nvim-notify",
+    opts = {
+      timeout = 10000,
+    },
+  },
+  {
     "nvim-telescope/telescope-ui-select.nvim",
     config = function()
       local original_ui_select = vim.ui.select
