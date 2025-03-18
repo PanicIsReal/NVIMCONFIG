@@ -19,7 +19,8 @@ vim.opt.smarttab = true
 vim.opt.autoindent = true
 vim.opt.smartindent = true
 vim.opt.cindent = false
-vim.o.scrolloff = 10
+vim.o.scrolloff = 999
+vim.o.relativenumber = true
 vim.o.background = 'dark'
 vim.opt.number = true
 
