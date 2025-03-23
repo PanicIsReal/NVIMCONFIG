@@ -1,4 +1,4 @@
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim0"
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
     "git",
@@ -12,6 +12,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 -- Set global indentation to 2 spaces
 vim.opt.tabstop = 2
+vim.opt.splitright = true
 vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
 vim.opt.softtabstop = 2
@@ -19,9 +20,13 @@ vim.opt.smarttab = true
 vim.opt.autoindent = true
 vim.opt.smartindent = true
 vim.opt.cindent = false
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
+vim.opt.foldenable = true
+vim.opt.foldlevelstart = 99
 vim.o.scrolloff = 999
-vim.o.relativenumber = true
 vim.o.background = 'dark'
+vim.o.relativenumber = true
 vim.opt.number = true
 
 -- Filetype-specific indentation for TypeScript, JavaScript, TSX, and JSON
@@ -36,7 +41,27 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 require("lazy").setup({
-  {"nvim-treesitter/nvim-treesitter", build = ":TSUpdate"},
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        ensure_installed = { "lua", "javascript", "typescript", "tsx", "json" }, -- Add languages you use
+        highlight = { enable = true },
+        fold = { enable = true }, -- Enable Treesitter folding
+        textobjects = {
+          select = {
+            enable = true,
+            lookahead = true,
+            keymaps = {
+              ["af"] = "@function.outer",
+              ["if"] = "@function.inner",
+            },
+          },
+        },
+      })
+    end,
+  },
   "nvim-lua/plenary.nvim",
   {
     "nvim-telescope/telescope.nvim",
@@ -106,7 +131,7 @@ require("lazy").setup({
           if vim.bo[props.buf].modified then
             filename = "[+] " .. filename
           end
-  
+
           local icon, color = require("nvim-web-devicons").get_icon_color(filename)
           return { { icon, guifg = color }, { " " }, { filename } }
         end,
@@ -134,6 +159,7 @@ require("lazy").setup({
       timeout = 10000,
       stages = "fade_in_slide_out", -- Smooth animation
       render = "default",
+      background_colour = "#000000",
       on_open = function(win)
         vim.api.nvim_win_set_config(win, { focusable = false }) -- Prevent stealing focus
       end,
@@ -292,6 +318,30 @@ require("lazy").setup({
             })
           end,
         },
+        Explainer = {
+          prompt = 'Explain how it works',
+          system_prompt = 'You are very good at explaining stuff',
+          mapping = '<leader>ccce',
+          description = 'Explainer',
+        },
+        Optimizer = {
+          prompt = 'Optimize the code, reduce and redundancy and improve readability, simplify any functions as long as it doesnt hinder readability',
+          system_prompt = 'You specialize in assiting with coding',
+          mapping = '<leader>cccr',
+          description = 'Optimizes code.',
+        },
+        TypeErrorCorrect = {
+          prompt = 'I have a Type Error in this code, can you correct it?',
+          system_prompt = 'You specialize in assiting with coding, especially with TypeScript',
+          mapping = '<leader>cccte',
+          description = 'Attempts to identify and correct type issues.',
+        },
+        CommentGenerator = {
+          prompt = 'I need you to generate comments for all methods/functions/classes that follows TypeScript standards',
+          system_prompt = 'You specialize in assiting with coding, especially with TypeScript',
+          mapping = '<leader>cccg',
+          description = 'Attempts to generate comments for all method/functions in the code',
+        },
       },
     },
     config = function(_, opts)
@@ -409,33 +459,30 @@ lspconfig.ts_ls.setup {
     },
   },
 }
--- Neoformat configuration
--- vim.g.neoformat_typescript_prettier = {
---   exe = "prettier",
---   args = {"--stdin-filepath", vim.fn.expand("%:p"), "--single-quote", "--trailing-comma", "es5"},
---   stdin = 1,
--- }
--- vim.g.neoformat_javascript_prettier = {
---   exe = "prettier",
---   args = {"--stdin-filepath", vim.fn.expand("%:p"), "--single-quote", "--trailing-comma", "es5"},
---   stdin = 1,
--- }
--- vim.g.neoformat_typescriptreact_prettier = {
---   exe = "prettier",
---   args = {"--stdin-filepath", vim.fn.expand("%:p"), "--single-quote", "--trailing-comma", "es5"},
---   stdin = 1,
--- }
--- vim.g.neoformat_json_prettier = {
---   exe = "prettier",
---   args = {"--stdin-filepath", vim.fn.expand("%:p"), "--single-quote", "--trailing-comma", "es5"},
---   stdin = 1,
--- }
--- vim.g.neoformat_enabled_typescript = {"prettier"}
--- vim.g.neoformat_enabled_javascript = {"prettier"}
--- vim.g.neoformat_enabled_typescriptreact = {"prettier"}
--- vim.g.neoformat_enabled_json = {"prettier"}
 
--- Telescope keybindings
+local function fold_class_methods()
+  local ts_utils = require("nvim-treesitter.ts_utils")
+  local node = ts_utils.get_node_at_cursor()
+  if not node then return end
+
+  -- Traverse up to find the class node
+  while node and node:type() ~= "class_declaration" do
+    node = node:parent()
+  end
+  if not node then
+    vim.notify("Not inside a class", "warn")
+    return
+  end
+
+  -- Fold all method definitions
+  for child in node:iter_children() do
+    if child:type() == "method_definition" then
+      local start_row = child:start()
+      vim.fn.setpos(".", {0, start_row + 1, 0, 0}) -- Move to method
+      vim.cmd("normal! zc")                        -- Fold it
+    end
+  end
+end
 local telescope = require("telescope.builtin")
 vim.keymap.set("n", "<C-p>", function()
   telescope.find_files({
@@ -476,11 +523,11 @@ end, { desc = "Toggle/Trigger Copilot suggestion" })
 
 -- lsp
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
-  vim.lsp.handlers.hover, {
-    wrap = true,
-    max_width = 80,
-    border = "rounded",
-  }
+vim.lsp.handlers.hover, {
+  wrap = true,
+  max_width = 80,
+  border = "rounded",
+}
 )
 
 -- Enable wrapping for diagnostic popups
@@ -492,6 +539,7 @@ vim.diagnostic.config({
     source = "always",
   },
 })
+
 
 -- Keybinding to show diagnostics in a floating window
 vim.keymap.set("n", "<leader>dd", function()
@@ -505,8 +553,8 @@ vim.keymap.set("n", "<leader>dd", function()
   })
 end, { desc = "toggles local troubleshoot" })
 
-vim.g.copilot_enabled = 0
-vim.cmd("Copilot disable")
+-- vim.g.copilot_enabled =
+-- vim.cmd("Copilot disable")
 
 -- New tab
 vim.keymap.set("n", "te", ":tabedit")
@@ -530,3 +578,15 @@ vim.keymap.set("i", "<C-h>", function()
     end
   end
 end, { desc = "Close floating windows in insert mode" })
+
+vim.keymap.set('n', '<M-S-Up>', ':resize +1<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<M-S-Down>', ':resize -1<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<M-S-Right>', ':vertical resize +1<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<M-S-Left>', ':vertical resize -1<CR>', { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>fc", "zc", { desc = "Fold close" })
+vim.keymap.set("n", "<leader>fo", "zo", { desc = "Fold open" })
+vim.keymap.set("n", "<leader>ft", "za", { desc = "Fold toggle" })
+vim.keymap.set("n", "<leader>fM", "zM", { desc = "Fold mass close" })
+vim.keymap.set("n", "<leader>fR", "zR", { desc = "Fold mass open" })
+vim.keymap.set("n", "<leader>fm", fold_class_methods, { desc = "Fold methods in class" })
