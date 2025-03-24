@@ -590,3 +590,4 @@ vim.keymap.set("n", "<leader>ft", "za", { desc = "Fold toggle" })
 vim.keymap.set("n", "<leader>fM", "zM", { desc = "Fold mass close" })
 vim.keymap.set("n", "<leader>fR", "zR", { desc = "Fold mass open" })
 vim.keymap.set("n", "<leader>fm", fold_class_methods, { desc = "Fold methods in class" })
+--
